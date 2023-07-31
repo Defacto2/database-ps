@@ -23,7 +23,7 @@ services:
     container_name: database_mysql
     # expose ports to the other containers and the network
     ports:
-      - 3306:3306
+      - 3304:3306
     networks:
       - back-tier
     volumes:
