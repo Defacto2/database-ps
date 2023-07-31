@@ -5,7 +5,7 @@ WORKDIR /opt/sql
 COPY create-table.sql /opt/sql/
 
 # WINDOWS USERS
-# End-of-line sequence MUST be LF or the RUN command will fail.
+# EOL-Sequence of this file MUST always be LF (Unix) or the RUN command will fail.
 RUN <<EOT
   apk version zstd curl
   apk add zstd curl
