@@ -1,0 +1,15 @@
+/* 
+pgloader command script to import mysql to postgresql 
+documentation: https://pgloader.readthedocs.io/en/latest/command.html
+*/
+LOAD DATABASE
+     FROM      mysql://root:example@mysql/defacto2-inno
+     INTO postgresql://root:example@db:5432/defacto2_ps
+ WITH include drop, create tables
+
+ALTER SCHEMA 'defacto2-inno' RENAME TO 'public'
+
+AFTER LOAD DO
+    $$ DROP TABLE IF EXISTS "groupnames"; $$,
+    $$ DROP TABLE IF EXISTS "netresources"; $$
+;

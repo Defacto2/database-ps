@@ -1,0 +1,133 @@
+# This multi-container application fetches the Defacto2 MySQL database,
+# and migrates it to a PostgreSQL database.
+#
+# Use root/example as the database user and password credentials.
+#
+######################################################################
+#
+#   WHEN RUNNING THIS FOR THE FIRST TIME:
+#     docker compose --profile migrater up
+#
+#   Then afterwards, to cleanup:
+#     docker compose rm migrate mysql dbdump --stop
+#     docker volume rm database-ps_tmpdump database-ps_tmpsql
+#
+######################################################################
+#
+# To rerun this composition after the data migration: 
+# 
+#   docker compose up
+#   docker compose up --detach
+#
+# To delete forever everything and rebuild the database:
+#
+#   docker compose --profile migrater up --force-recreate
+#
+# To delete forever everything:
+#
+#   docker compose rm migrate mysql dbdump admin database --stop
+#   docker volume rm database-ps_tmpdump database-ps_tmpsql database-ps_data
+#
+services:
+
+  migrate:
+    image: dimitri/pgloader
+    container_name: migration
+    labels:
+      net.defacto2.description: "Migrate the MySQL database to PostgreSQL"
+    volumes: 
+      - "./pgloader-config:/loader"
+    depends_on:
+      database:
+        condition: service_healthy
+      dbdump:
+        condition: service_completed_successfully
+    # pgloader, migrate to PostgreSQL in a single command
+    # https://github.com/dimitri/pgloader
+    command: pgloader /loader/my.load
+    profiles:
+      - migrater
+
+  dbdump:
+    labels:
+      net.defacto2.description: "Download and assemble the SQL data dump"
+    container_name: dump
+    build: ./sql
+    tty: false
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - type: volume
+        source: tmpdump
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+    profiles:
+      - migrater
+
+  mysql:
+    image: mariadb
+    labels:
+      net.defacto2.description: "Defacto2 MySQL database"
+    restart: "no"
+    container_name: mysql
+    # expose ports to the other containers and but not to the host machine
+    expose:
+      - 3304:3306
+    volumes:
+      # store the database on a docker volume
+      - tmpsql:/var/lib/mysql
+      # create the database on the first time build
+      - type: volume
+        source: tmpdump
+        target: /docker-entrypoint-initdb.d
+        read_only: false # must be kept to false!
+    environment:
+      # for more options, see: https://hub.docker.com/_/mariadb
+      MARIADB_ROOT_PASSWORD: example
+      MARIADB_DATABASE: defacto2-inno
+      MARIADB_AUTO_UPGRADE: true
+    profiles:
+      - migrater
+    healthcheck:
+        test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+        interval: 15s
+        timeout: 5s
+        retries: 5
+
+  database:
+    image: postgres:16-alpine
+    container_name: postgres16
+    hostname: db # this should remain unchanged
+    env_file: .database.env
+    restart: always
+    labels:
+      net.defacto2.description: "Defacto2 PostgreSQL database"
+    volumes:
+      # store the database on a docker volume
+      - data:/var/lib/postgresql/data
+    # publish the database port so the webapp can connect to it.
+    # never use the "expose:" element as it will not publish to the host machine.
+    ports:
+      - "5432:5432"
+    healthcheck:
+      # ps_isready - check the connection status of a PostgreSQL server
+      # see: https://www.postgresql.org/docs/current/app-pg-isready.html
+      test: ["CMD-SHELL", "pg_isready -d defacto2_ps -U root"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  admin:
+    image: adminer:4-standalone
+    container_name: admin
+    restart: unless-stopped
+    labels:
+      net.defacto2.description: "Databases admin web interface"
+    ports:
+      - 8080:8080
+
+volumes:
+  data:
+  tmpdump:
+  tmpsql:
