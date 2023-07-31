@@ -1,0 +1,83 @@
+# Use root/example as user/password credentials
+# 
+# to run: docker compose up
+services:
+
+  sqldump:
+    labels:
+      wheels.description: "Download and assemble the SQL data"
+    container_name: sql_dump
+    build: ./sql
+    tty: false
+    volumes:
+      - type: volume
+        source: sql_dump
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+
+  sqlhost:
+    image: mariadb
+    labels:
+      net.defacto2.description: "Defacto2 MySQL database"
+    restart: always
+    container_name: database_mysql
+    # expose ports to the other containers and the network
+    ports:
+      - 3306:3306
+    networks:
+      - back-tier
+    volumes:
+      # store the database on a docker volume
+      - mysql:/var/lib/mysql
+      # create the database on the first time build
+      - type: volume
+        source: sql_dump
+        target: /docker-entrypoint-initdb.d
+        read_only: false # must be kept to false!
+    environment:
+      # for more options, see: https://hub.docker.com/_/mariadb
+      MARIADB_ROOT_PASSWORD: example
+      MARIADB_DATABASE: defacto2-inno
+      MARIADB_AUTO_UPGRADE: true
+    depends_on:
+      - sqldump
+
+  db:
+    image: postgres
+    labels:
+      net.defacto2.description: "Defacto2 Postgres database"
+    restart: always
+    container_name: database_ps
+    networks:
+      - back-tier
+    volumes:
+      # store the database on a docker volume
+      - pssql:/var/lib/postgresql/data
+    # expose:
+    #   - "5432" # Publishes 5432 to other containers but NOT to host machine
+    ports:
+      - "5432:5432"
+    environment:
+      # for more options, see: https://hub.docker.com/_/postgres
+      POSTGRES_PASSWORD: example
+      POSTGRES_USER: root
+      POSTGRES_DB: defacto2-ps
+
+  adminer:
+    labels:
+      net.defacto2.description: "Admin web interface"
+    image: adminer
+    restart: always
+    container_name: web_admin_ps
+    networks:
+      - back-tier
+    ports:
+      - 8080:8080
+
+networks:
+  back-tier: {}
+
+volumes:
+  pssql:
+  mysql:
+  sql_dump:
