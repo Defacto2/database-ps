@@ -1,11 +1,34 @@
-# Use root/example as user/password credentials
+# This multi-container application fetches the Defacto2 MySQL database,
+# and migrates it to an active PostgreSQL database.
+#
+# Use root/example as the database user and password credentials.
 # 
-# to run: docker compose up
+# To run this composition: 
+# docker compose --profile migrater up
+# docker compose up
 services:
+
+  migrate:
+    labels:
+      net.defacto2.description: "Migrate the MySQL database to PostgreSQL"
+    image: dimitri/pgloader
+    container_name: pgloader
+    networks:
+      - back-tier
+    volumes: 
+      - "./init-db:/opt/db"
+      - "./pgloader-config:/loader"
+    depends_on:
+      - sqldump
+      - mysql
+      - db
+    command: pgloader /loader/my.load
+    profiles:
+      - migrater
 
   sqldump:
     labels:
-      wheels.description: "Download and assemble the SQL data"
+      net.defacto2.description: "Download and assemble the SQL data dump"
     container_name: sql_dump
     build: ./sql
     tty: false
@@ -14,8 +37,10 @@ services:
         source: sql_dump
         target: /docker-entrypoint-initdb.d
         read_only: true
+    profiles:
+      - migrater
 
-  sqlhost:
+  mysql:
     image: mariadb
     labels:
       net.defacto2.description: "Defacto2 MySQL database"
@@ -39,13 +64,13 @@ services:
       MARIADB_ROOT_PASSWORD: example
       MARIADB_DATABASE: defacto2-inno
       MARIADB_AUTO_UPGRADE: true
-    depends_on:
-      - sqldump
+    profiles:
+      - migrater
 
   db:
     image: postgres
     labels:
-      net.defacto2.description: "Defacto2 Postgres database"
+      net.defacto2.description: "Defacto2 PostgreSQL database"
     restart: always
     container_name: database_ps
     networks:
@@ -65,7 +90,7 @@ services:
 
   adminer:
     labels:
-      net.defacto2.description: "Admin web interface"
+      net.defacto2.description: "Databases admin web interface"
     image: adminer
     restart: always
     container_name: web_admin_ps
