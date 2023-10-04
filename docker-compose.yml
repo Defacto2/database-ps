@@ -79,7 +79,7 @@ services:
       # store the database on a docker volume
       - pssql:/var/lib/postgresql/data
     # expose:
-    #   - "5432" # Publishes 5432 to other containers but NOT to host machine
+    #   - "5432" # Publishes 5432 to other containers but NOT to the host machine
     ports:
       - "5432:5432"
     environment:

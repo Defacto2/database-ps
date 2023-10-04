@@ -1,107 +1,156 @@
-# Defacto2 database exports
+# Defacto2 Postgres database
 
-![MySQL](https://img.shields.io/badge/mysql-compatible-green?style=flat-square)
+This repository contains a [Docker container](https://www.docker.com/) to create and import the Defacto2 database. The database is a collection of tens of thousands of records that document the history of the PC scene. The data is used to power the [Defacto2.net](https://defacto2.net) website.
 
-### Daily MySQL exports
+### Table of contents
 
-Defacto2 releases daily exports of the MySQL database for download. You will need Docker or a preconfigured and running database server that can handle MySQL syntax. Any of these database applications is suitable.
+- [Defacto2 Postgres database](#defacto2-postgres-database)
+    - [Table of contents](#table-of-contents)
+    - [Setup](#setup)
+    - [First time setup](#first-time-setup)
+      - [Optional, cleanup the migration containers](#optional-cleanup-the-migration-containers)
+    - [Postgres admin interface](#postgres-admin-interface)
+    - [Start and stop](#start-and-stop)
+    - [Remove, reset or resync the database data](#remove-reset-or-resync-the-database-data)
+    - [Dataset](#dataset)
+      - [Files](#files)
+    - [License](#license)
 
-[MySQL Community](https://dev.mysql.com/downloads/mysql/),
-[Percona for MySQL](https://www.percona.com/software/mysql-database/percona-server), [MariaDB](https://mariadb.com).
+### Setup
 
-### Docker
+The database is a [Docker Compose](https://docs.docker.com/compose/) project that first must be cloned to your local machine. The project includes a `docker-compose.yml` file that defines the database container and a the migration container. The migration container is used to import the data from the live, MySQL Defacto2 database.
 
-The easiest way to create the database is with [Docker Compose](https://www.docker.com/products/docker-desktop/), which will download and make while running on the default MySQL port of 3306 with a website admin interface.
+Docker or [Docker Desktop](https://www.docker.com/products/docker-desktop/) also needs to be installed on your machine.
+```sh
+# go to your projects folder
+cd ~
+
+# clone this repository
+git clone git@github.com:Defacto2/database-ps.git
+
+# or use the gh cli tool
+gh repo clone Defacto2/database-ps
+```
+
+### First time setup
+
+On a new install for the Defacto2 database, a data migration will need to be run for the first time. This will create the Postgres database Docker container and import the data from the live, MySQL Defacto2 database. The migration will take a few minutes to complete.
+
+Docker or Docker desktop must first be running, then open a terminal and run the following commands.
 
 ```sh
-git clone git@github.com:Defacto2/database.git
-cd database
+cd database-ps
+
+# migrate the Defacto2 data from MySQL to Postgres
+docker compose --profile migrater up
+```
+
+If successful, the output will look similar to this
+
+```
+Attaching to database_mysql, database_ps, pgloader, sql_dump, web_admin_ps
+database_ps     | 
+database_ps     | PostgreSQL Database directory appears to contain a database; Skipping initialization
+database_ps     | 
+...
+
+pgloader        | 2023-10-04T04:51:29.010000Z LOG pgloader version "3.6.7~devel"
+pgloader        | 2023-10-04T04:51:29.068000Z LOG Migrating from #<MYSQL-CONNECTION mysql://root@mysql:3306/defacto2-inno {1007EBA523}>
+pgloader        | 2023-10-04T04:51:29.069000Z LOG Migrating into #<PGSQL-CONNECTION pgsql://root@db:5432/defacto2-ps {1007EBB0E3}>
+pgloader        | 2023-10-04T04:51:30.981000Z LOG report summary reset
+pgloader        |              table name     errors       rows      bytes      total time
+pgloader        | -----------------------  ---------  ---------  ---------  --------------
+pgloader        |         fetch meta data          0         10                     0.071s
+pgloader        |          Create Schemas          0          0                     0.000s
+pgloader        |        Create SQL Types          0          0                     0.003s
+pgloader        |           Create tables          0          6                     0.048s
+pgloader        |          Set Table OIDs          0          3                     0.017s
+pgloader        | -----------------------  ---------  ---------  ---------  --------------
+pgloader        |            public.files          0      45736    39.5 MB          1.416s
+pgloader        |       public.groupnames          0        522    13.5 kB          0.024s
+pgloader        |     public.netresources          0        228    95.2 kB          0.029s
+pgloader        | -----------------------  ---------  ---------  ---------  --------------
+pgloader        | COPY Threads Completion          0          4                     1.416s
+pgloader        |          Create Indexes          0          7                     0.303s
+pgloader        |  Index Build Completion          0          7                     0.158s
+pgloader        |         Reset Sequences          0          3                     0.037s
+pgloader        |            Primary Keys          0          3                     0.002s
+pgloader        |     Create Foreign Keys          0          0                     0.000s
+pgloader        |         Create Triggers          0          0                     0.000s
+pgloader        |        Install Comments          0         75                     0.016s
+pgloader        |              after load          0          2                     0.040s
+pgloader        | -----------------------  ---------  ---------  ---------  --------------
+pgloader        |       Total import time          ✓      46486    39.6 MB          1.972s
+```
+
+Note, the post-migration process will delete both the unused, `public.groupnames` and `public.netresources` tables.
+
+#### Optional, cleanup the migration containers
+
+Once the migration is complete the databases will be running in the background. To stop the database containers, tap `Ctrl+c` in the terminal window. Then run the following commands to clean the migration containers.
+
+```sh
+cd database-ps
+
+# delete the migrate containers and associated volumes
+docker compose rm -v migrate sqldump mysql
+```
+
+### Postgres admin interface
+
+The database container includes a web-based admin interface that can be used to view and edit the database. The Adminer interface is found at http://localhost:8080/?pgsql=db&username=root&db=defacto2-ps&ns=public,
+
+- _System_, `PostgreSQL`
+- _Server_, `db`
+- _Username_, `root`
+- __Password__, `example`
+
+To select and show the data use, http://localhost:8080/?pgsql=db&username=root&db=defacto2-ps&ns=public&select=files
+
+### Start and stop
+
+Once the migration is complete, the database container can be started and stopped as needed.
+
+```sh
+cd database-ps
+
+# start the postgres database server (tap Ctrl+c to stop)
 docker compose up
 ```
 
-The web interface is found at http://localhost:8080, _username_ `root` and _password_ `example`.
+Or to run the database in the background.
 
-If you use Docker and compose, you can skip the rest of the readme.
+```sh
+cd database-ps
+
+# start the postgres database server in the background
+docker compose -d up
+
+# stop the postgres database server
+docker compose down
+```
+
+### Remove, reset or resync the database data
+
+The simplist way to reset the database is to delete the container and start again. **This will delete all the data and the database container**.
+
+```sh
+cd database-ps
+
+# force-stop the database container
+docker compose kill
+
+# delete all the containers and associated volumes
+docker compose rm -v migrate sqldump mysql db adminer
+```
+
+Then rerun the [First time setup](#first-time-setup) instructions to reinstall the database.
 
 ---
 
-### Create and import
+### Dataset
 
-#### Create
-
-Create is a one-time statement that initializes a new database, file table, and table columns.
-
-__[CREATE TABLE SQL download](https://raw.githubusercontent.com/Defacto2/database/main/sql/create-table.sql)__ 
-
-`create-table.sql`
-
-#### Insert
-
-Insert is the daily export that uses an `INSERT` statement __to create all new__ data.
-
-__[INSERT SQL download](https://defacto2.net/sql/d2-sql-insert.sql)__ <small>([SHA1](https://defacto2.net/sql/d2-sql-insert.sql.sha1))</small>
-
-`d2-sql-insert.sql`
-
-#### Update
-
-The daily export update uses `REPLACE INTO` statements __to update__ any existing data.
-
-__[UPDATE SQL download](https://defacto2.net/sql/d2-sql-update.sql)__ <small>([SHA1](https://defacto2.net/sql/d2-sql-update.sql.sha1))</small>
-
-`d2-sql-update.sql`
-
-#### Instructions
-
-In a terminal, use the MySQL client to import the data:
-
-```bash
-# download the create table and insert data statements
-curl https://raw.githubusercontent.com/Defacto2/database/main/sql/create-table.sql --output create-table.sql
-curl https://defacto2.net/sql/d2-sql-insert.sql --output d2-sql-insert.sql
-
-# import the create table statement to the database using 
-# the root account and prompt the root password
-mysql -u root -p < create-table.sql
-
-# import the SQL data to the new defacto2-inno database 
-mysql -u root -p --database defacto2-inno < d2-sql-insert.sql
-```
-
-To test the table creation and data.
-
-```bash
-mysql -u root -p --database defacto2-inno
-```
-
-```mysql
-mysql> SELECT COUNT(*) FROM files;
-
-+----------+
-| COUNT(*) |
-+----------+
-|    41384 |
-+----------+
-1 row in set (0.01 sec)
-
-mysql> exit
-```
-
----
-
-#### License
-
-The data and these exports are under a [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) license.
-
----
-
-### Datasets
-
-The data gets separated into three tables, `files`, `groups`, and `netresources`
-
-- `files` that form the site's core and compose of tens of thousands rows of hosted data.
-- `groups` comprise of only initialisms and acronyms for scene groups.
-- `netresources` are online links to other scene resources, usually websites.
+The data gets created into a single table `files`. The table is a collection of tens of thousands of records that document the history of the PC scene. The data is used to power the [Defacto2.net](https://defacto2.net) website.
 
 #### Files
 
@@ -155,39 +204,8 @@ The data gets separated into three tables, `files`, `groups`, and `netresources`
 | updatedby                 | The id of the account which updated this record                     | `ADB7C2BF-7221-467B-B813-3636FE4AE16B`     |
 | updatedat                 | When this record was last updated                                   | 2017-03-19 05:57:12                        |
 
-##### Groups
+---
 
-| Column      | Description                 | Example value    |
-| ----------- | --------------------------- | ---------- |
-| id          | Primary key                 | `9`        |
-| pubname     | Unique group id             | Razor 1911 |
-| initialisms | Acronym or initialism value | RZR        |
+### License
 
-##### Netresources
-
-| Column           | Description                                        | Example value                                            |
-| ---------------- | -------------------------------------------------- | -------------------------------------------------- |
-| id               | Primary key                                        | `675`                                              |
-| uuid             | Unique identifier                                  | `6c43b299-d7da-4670-a687-70c642b3a33e`             |
-| legacyid         | Callback to the original database used by Defacto2 |                                                    |
-| httpstatuscode   | HTTP code results from a ping                      | `200`                                              |
-| httpstatustext   | HTTP text results from a ping                      | `OK`                                               |
-| httplocation     | Unused                                             |                                                    |
-| httpetag         | HTTP etag result that's used for cache             |                                                    |
-| httplastmodified | HTTP lastmodified result that's used for cache     |                                                    |
-| metatitle        | Title metatag                                      | Demozoo                                            |
-| metadescription  | Description metatag                                |                                                    |
-| metaauthors      | Authors metatag                                    |                                                    |
-| metakeywords     | Keywords metatag                                   |                                                    |
-| uriref           | Web address                                        | http://demozoo.org                                 |
-| title            | Name of the site                                   | Demozoo                                            |
-| date_issued_year | Publication year                                   |                                                    |
-| date_issued_year | Publication month                                  |                                                    |
-| date_issued_year | Publication day                                    |                                                    |
-| comment          | About this web resource                            | The world's largest database of scene productions. |
-| categorykey      | Category tag                                       | cracktro                                           |
-| categorysort     | Subcategory tag                                    | gallery                                            |
-| deletedat        | When this record was disabled                      |                                                    |
-| deletedatcomment | The reason this record was disabled                |                                                    |
-| createdat        | When this record was created                       | 2016-05-07 20:43:36                                |
-| updatedat        | When this record was last updated                  | 2017-01-27 22:11:23                                |
+The database data is licensed under a [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) license.

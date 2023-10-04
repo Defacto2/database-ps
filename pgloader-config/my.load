@@ -6,5 +6,10 @@ LOAD DATABASE
      FROM      mysql://root:example@mysql/defacto2-inno
      INTO postgresql://root:example@db:5432/defacto2-ps
  WITH include drop, create tables
+
 ALTER SCHEMA 'defacto2-inno' RENAME TO 'public'
+
+AFTER LOAD DO
+    $$ DROP TABLE IF EXISTS "groupnames"; $$,
+    $$ DROP TABLE IF EXISTS "netresources"; $$
 ;
