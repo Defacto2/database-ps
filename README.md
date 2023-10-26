@@ -1,15 +1,15 @@
-# Defacto2 Postgres database
+# Defacto2 PostgreSQL database
 
 This repository contains a [Docker container](https://www.docker.com/) to create and import the Defacto2 database. The database is a collection of tens of thousands of records that document the history of the PC scene. The data is used to power the [Defacto2.net](https://defacto2.net) website.
 
 ### Table of contents
 
-- [Defacto2 Postgres database](#defacto2-postgres-database)
+- [Defacto2 PostgreSQL database](#defacto2-postgresql-database)
     - [Table of contents](#table-of-contents)
     - [Setup](#setup)
     - [First time setup](#first-time-setup)
       - [Optional, cleanup the migration containers](#optional-cleanup-the-migration-containers)
-    - [Postgres admin interface](#postgres-admin-interface)
+    - [PostgreSQL admin interface](#postgresql-admin-interface)
     - [Start and stop](#start-and-stop)
     - [Remove, reset or resync the database data](#remove-reset-or-resync-the-database-data)
     - [Dataset](#dataset)
@@ -28,30 +28,26 @@ cd ~
 # clone this repository
 git clone git@github.com:Defacto2/database-ps.git
 
-# or use the gh cli tool
+# OR, use the gh cli tool
 gh repo clone Defacto2/database-ps
 ```
 
 ### First time setup
 
-On a new install for the Defacto2 database, a data migration will need to be run for the first time. This will create the Postgres database Docker container and import the data from the live, MySQL Defacto2 database. The migration will take a few minutes to complete.
+On a new install for the Defacto2 database, a data migration will need to be run for the first time. This will create the PostgreSQL database Docker container and import the data from the live, MySQL Defacto2 database. The migration will take a few minutes to complete.
 
 Docker or Docker desktop must first be running, then open a terminal and run the following commands.
 
 ```sh
 cd database-ps
 
-# migrate the Defacto2 data from MySQL to Postgres
+# migrate the Defacto2 data from MySQL to PostgreSQL
 docker compose --profile migrater up
 ```
 
 If successful, the output will look similar to this
 
 ```
-Attaching to database_mysql, database_ps, pgloader, sql_dump, web_admin_ps
-database_ps     | 
-database_ps     | PostgreSQL Database directory appears to contain a database; Skipping initialization
-database_ps     | 
 ...
 
 pgloader        | 2023-10-04T04:51:29.010000Z LOG pgloader version "3.6.7~devel"
@@ -92,11 +88,12 @@ Once the migration is complete the databases will be running in the background. 
 ```sh
 cd database-ps
 
-# delete the migrate containers and associated volumes
-docker compose rm -v migrate sqldump mysql
+# delete the one-time use, migration containers and associated volumes
+docker compose rm migrate mysql dbdump --stop
+docker volume rm database-ps_tmpdump database-ps_tmpsql
 ```
 
-### Postgres admin interface
+### PostgreSQL admin interface
 
 The database container includes a web-based admin interface that can be used to view and edit the database. The Adminer interface is found at http://localhost:8080/?pgsql=db&username=root&db=defacto2-ps&ns=public,
 
@@ -137,14 +134,8 @@ The simplist way to reset the database is to delete the container and start agai
 ```sh
 cd database-ps
 
-# force-stop the database container
-docker compose kill
-
-# delete all the containers and associated volumes
-docker compose rm -v migrate sqldump mysql db adminer
+docker compose --profile migrater up --force-recreate
 ```
-
-Then rerun the [First time setup](#first-time-setup) instructions to reinstall the database.
 
 ---
 
