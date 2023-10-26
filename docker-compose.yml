@@ -59,7 +59,6 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-        required: true
     volumes:
       - type: volume
         source: tmpdump
