@@ -28,6 +28,7 @@
 #   docker compose rm migrate mysql dbdump admin database --stop
 #   docker volume rm database-ps_tmpdump database-ps_tmpsql database-ps_data
 #
+version: "3.8"
 services:
 
   migrate:
