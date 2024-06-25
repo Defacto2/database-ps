@@ -52,7 +52,7 @@ If successful, the output will look similar to this
 
 pgloader        | 2023-10-04T04:51:29.010000Z LOG pgloader version "3.6.7~devel"
 pgloader        | 2023-10-04T04:51:29.068000Z LOG Migrating from #<MYSQL-CONNECTION mysql://root@mysql:3306/defacto2-inno {1007EBA523}>
-pgloader        | 2023-10-04T04:51:29.069000Z LOG Migrating into #<PGSQL-CONNECTION pgsql://root@db:5432/defacto2-ps {1007EBB0E3}>
+pgloader        | 2023-10-04T04:51:29.069000Z LOG Migrating into #<PGSQL-CONNECTION pgsql://root@db:5432/defacto2_ps {1007EBB0E3}>
 pgloader        | 2023-10-04T04:51:30.981000Z LOG report summary reset
 pgloader        |              table name     errors       rows      bytes      total time
 pgloader        | -----------------------  ---------  ---------  ---------  --------------
@@ -95,14 +95,14 @@ docker volume rm database-ps_tmpdump database-ps_tmpsql
 
 ### PostgreSQL admin interface
 
-The database container includes a web-based admin interface that can be used to view and edit the database. The Adminer interface is found at http://localhost:8080/?pgsql=db&username=root&db=defacto2-ps&ns=public,
+The database container includes a web-based admin interface that can be used to view and edit the database. The Adminer interface is found at http://localhost:8080/?pgsql=db&username=root&db=defacto2_ps&ns=public,
 
 - _System_, `PostgreSQL`
 - _Server_, `db`
 - _Username_, `root`
 - __Password__, `example`
 
-To select and show the data use, http://localhost:8080/?pgsql=db&username=root&db=defacto2-ps&ns=public&select=files
+To select and show the data use, http://localhost:8080/?pgsql=db&username=root&db=defacto2_ps&ns=public&select=files
 
 ### Start and stop
 

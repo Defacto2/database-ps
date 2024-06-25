@@ -28,7 +28,6 @@
 #   docker compose rm migrate mysql dbdump admin database --stop
 #   docker volume rm database-ps_tmpdump database-ps_tmpsql database-ps_data
 #
-version: "3.8"
 services:
 
   migrate:
@@ -98,7 +97,7 @@ services:
 
   database:
     image: postgres:16-alpine
-    container_name: database
+    container_name: postgres16
     hostname: db # this should remain unchanged
     env_file: .database.env
     restart: always
@@ -114,19 +113,19 @@ services:
     healthcheck:
       # ps_isready - check the connection status of a PostgreSQL server
       # see: https://www.postgresql.org/docs/current/app-pg-isready.html
-      test: ["CMD-SHELL", "pg_isready -d defacto2-ps -U root"]
+      test: ["CMD-SHELL", "pg_isready -d defacto2_ps -U root"]
       interval: 15s
       timeout: 5s
       retries: 5
 
   admin:
-    image: adminer
+    image: adminer:4-standalone
     container_name: admin
     restart: unless-stopped
     labels:
       net.defacto2.description: "Databases admin web interface"
     ports:
-      - 8080:8086
+      - 8080:8080
 
 volumes:
   data:
