@@ -1,9 +1,9 @@
-# Defacto2 PostgreSQL database
+# Defacto2 SQL database
 
 This repository contains a [Docker container](https://www.docker.com/) to create and import the Defacto2 database. The database is a collection of tens of thousands of records that document the history of the PC scene. The data is used to power the [Defacto2.net](https://defacto2.net) website.
 
 > [!IMPORTANT]  
-> The source MySQL database used in this migration was finalized and retired in September 2024.
+> The [preserved](https://github.com/Defacto2/database-ps/blob/main/sql/create-defacto2.sql) MySQL database used in this migration was finalized and retired in September 2024.
 > After importing there should be a total of 49,083 records in the "files" table.
 
 ### Table of contents
